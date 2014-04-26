@@ -1,0 +1,70 @@
+doctype html
+html
+  head
+    title Dashboard
+    link(rel="stylesheet" href="/style/bundle.css")
+  body
+    mixin ko(def)
+      | <!-- ko !{def} -->
+      block
+      | <!-- /ko -->
+    mixin foreach(items)
+      +ko('foreach: ' + items)
+        block
+    mixin if(condition)
+      +ko('if: ' + condition)
+        block
+    mixin text(expression)
+      span(data-bind="text:" + expression)
+    nav.navbar.navbar-default.navbar-static-top
+      .container-fluid
+        .navbar-brand Dashboard
+        +if('email() && !loading()')
+          .navbar-right
+            button.btn.btn-default.navbar-btn(
+              data-bind="click: add, enable: !addFormVisible()") Add Widget
+            button.btn.btn-default.navbar-btn(
+              data-bind="click: logout"
+              style="margin-left: 1em") Sign Out
+    .container-fluid
+      +foreach('errors()')
+        .alert.alert-danger(data-bind="text: $data")
+      +if('loading() && !errors().length')
+        .progress.progress-striped.active
+          .progress-bar(style="width: 100%")
+            span.sr-only Loading...
+      +if('!loading() && !email()')
+        button.btn.btn-primary.btn-lg.btn-block(data-bind="click: login") Sign In / Sign Up
+      +if('!loading() && email()')
+        +if('addFormVisible()')
+          form
+            .panel.panel-primary
+              .panel-heading Add Widget
+              .panel-body
+                .form-group
+                  label(for="select-widget-type") Widget Type
+                  select.form-control(
+                    data-bind="options: widgetTypes,\
+                               optionsText: 'name',\
+                               optionsCaption: 'Select widget type...',\
+                               value: selectedWidgetType")
+                div(data-bind="template: {\
+                  name: selectedWidgetType() && selectedWidgetType().form.template,\
+                  data: selectedWidgetType() && selectedWidgetType().form\
+                }")
+              .panel-footer
+                .pull-right
+                  button.btn.btn-primary(
+                    data-bind="enable: selectedWidgetType() && selectedWidgetType().form.enabled(),\
+                               click: addWidget") Add
+                  button.btn.btn-default(
+                    data-bind="click: cancelWidget"
+                    style="margin-left: 1em") Cancel
+                .clearfix
+        .row
+          +foreach('widgets')
+            .col-lg-3.col-md-6.col-sm-12(data-bind="template: { name: name}")
+    include ../widgets/date.jade
+    include ../widgets/gittip.jade
+    script(src="https://login.persona.org/include.js")
+    script(src="/client/index.js")

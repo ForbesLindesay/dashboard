@@ -1,0 +1,12 @@
+script#gittip(type="text/html")
+  .panel.panel-default
+    .panel-heading
+      +text('username()')
+      |  (per week)
+    .panel-body
+      p
+        +text('amount()')
+script#gittip-form(type="text/html")
+  .form-group
+    label(for="username") GitTip Username
+    input.form-control(name="username" data-bind="value: username")

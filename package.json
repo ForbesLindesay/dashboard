@@ -1,0 +1,31 @@
+{
+  "name": "dashboard",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Dashboard for my life",
+  "keywords": [],
+  "dependencies": {
+    "express": "~4.1.0",
+    "then-request": "0.0.4",
+    "jade": "~1.3.1",
+    "knockout": "~3.1.0",
+    "less-file": "0.0.8",
+    "browserify-middleware": "~2.5.0",
+    "jquery": "~2.1.0",
+    "twbs": "0.0.6",
+    "passport": "~0.2.0",
+    "cookie-session": "~1.0.1",
+    "ms": "~0.6.2",
+    "passport-persona": "~0.1.7",
+    "body-parser": "~1.0.2",
+    "mongod": "~1.2.0"
+  },
+  "devDependencies": {},
+  "scripts": {},
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ForbesLindesay/dashboard.git"
+  },
+  "author": "ForbesLindesay",
+  "license": "MIT"
+}
