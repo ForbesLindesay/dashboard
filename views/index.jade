@@ -22,7 +22,9 @@ html
         +if('email() && !loading()')
           .navbar-right
             button.btn.btn-default.navbar-btn(
-              data-bind="click: add, enable: !addFormVisible()") Add Widget
+              data-bind="click: add, visible: !addFormVisible()") Add / Edit Widgets
+            button.btn.btn-default.navbar-btn(
+              data-bind="click: cancelWidget, visible: addFormVisible()") Done
             button.btn.btn-default.navbar-btn(
               data-bind="click: logout"
               style="margin-left: 1em") Sign Out
@@ -53,17 +55,28 @@ html
                   data: selectedWidgetType() && selectedWidgetType().form\
                 }")
               .panel-footer
-                .pull-right
-                  button.btn.btn-primary(
-                    data-bind="enable: selectedWidgetType() && selectedWidgetType().form.enabled(),\
-                               click: addWidget") Add
-                  button.btn.btn-default(
-                    data-bind="click: cancelWidget"
-                    style="margin-left: 1em") Cancel
-                .clearfix
+                button.btn.btn-lg.btn-primary(
+                  data-bind="enable: selectedWidgetType() && selectedWidgetType().form.enabled(),\
+                             click: addWidget") Add
         .row
-          +foreach('widgets')
-            .col-lg-3.col-md-6.col-sm-12(data-bind="template: { name: name}")
+          +if('addFormVisible()')
+            +foreach('widgets')
+              .col-lg-3.col-md-6.col-sm-12
+                .panel.panel-default
+                  .panel-body
+                    div(data-bind="template: { name: name}")
+                    button.btn.btn-sm.btn-danger.pull-right(data-bind="click: remove") Delete
+                    .btn-group
+                      button.btn.btn-default(data-bind="click: moveLeft")
+                        span.hidden-xs.hidden-sm.glyphicon.glyphicon-chevron-left
+                        span.visible-xs.visible-sm.glyphicon.glyphicon-chevron-up
+                      button.btn.btn-default(data-bind="click: moveRight")
+                        span.hidden-xs.hidden-sm.glyphicon.glyphicon-chevron-right
+                        span.visible-xs.visible-sm.glyphicon.glyphicon-chevron-down
+                    .clearfix
+          +if('!addFormVisible()')
+            +foreach('widgets')
+              .col-lg-3.col-md-6.col-sm-12(data-bind="template: { name: name}")
     include ../widgets/date.jade
     include ../widgets/gittip.jade
     script(src="https://login.persona.org/include.js")

@@ -1,11 +1,27 @@
 'use strict';
 
 var ko = require('knockout');
+var request = require('then-request');
 
 function Gittip(options) {
+  this.updateFrequency = '1 minute';
+  this.supportsCache = true;
   this.username = ko.observable(options.username);
-  this.amount = ko.observable('loading...');
+  this.loading = ko.observable(true);
+  this.receiving = ko.observable('loading...');
+  this.giving = ko.observable('loading...');
 }
+Gittip.prototype.update = function () {
+  return request('https://www.gittip.com/' + this.username() + '/public.json').then(function (res) {
+    if (res.statusCode !== 200) {
+      throw new Error('gittip returned a status code of ' + res.statusCode);
+    }
+    var body = JSON.parse(res.body);
+    this.receiving(body.receiving);
+    this.giving(body.giving);
+    this.loading(false);
+  }.bind(this));
+};
 
 function GittipForm() {
   this.template = 'gittip-form';
@@ -15,10 +31,11 @@ function GittipForm() {
   }.bind(this));
 }
 
-GittipForm.prototype.add = function () {
-  var result = { username: this.username() };
+GittipForm.prototype.reset = function () {
   this.username('');
-  return result;
+};
+GittipForm.prototype.options = function () {
+  return { username: this.username() };
 };
 
 exports.name = 'gittip';

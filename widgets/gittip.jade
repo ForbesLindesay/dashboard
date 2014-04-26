@@ -1,11 +1,19 @@
 script#gittip(type="text/html")
-  .panel.panel-default
+  .panel(data-bind="css: {'panel-info': !loading(), 'panel-default': loading()}")
     .panel-heading
       +text('username()')
       |  (per week)
     .panel-body
-      p
-        +text('amount()')
+      +if('!loading()')
+        p.big-text $
+          +text('receiving()')
+        +if('giving() && +giving()')
+          p $
+            +text('giving()')
+    .panel-footer
+      small
+        = 'gittip '
+        +text('lastUpdate().toISOString()')
 script#gittip-form(type="text/html")
   .form-group
     label(for="username") GitTip Username

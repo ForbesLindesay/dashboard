@@ -1,5 +1,7 @@
 'use strict';
 
+var Promise = require('promise');
+var ms = require('ms');
 var ko = require('knockout');
 var request = require('then-request');
 var persona = require('./persona.js');
@@ -9,14 +11,43 @@ var widgetTypes = [
   require('../widgets/gittip.js')
 ];
 
-function initWidget(options) {
-  var widget =  widgetTypes.filter(function (widget) {
-    return widget.name === options.name;
-  })[0].init(options);
-  widget._id = options._id;
-  widget.name = options.name;
-  widget.weight = options.weight;
-  return widget;
+function saveWeight(widget) {
+  return request('/user/config/' + widget._id, {
+    method: 'POST',
+    body: JSON.stringify({weight: widget.weight()}),
+    headers: {
+      'content-type': 'application/json'
+    }
+  });
+}
+function cacheWidget(widget) {
+  widget.lastUpdate(new Date());
+  if (window.localStorage && widget.supportsCache) {
+    var store = {};
+    Object.keys(widget).forEach(function (key) {
+      if (ko.isObservable(widget[key]) && !ko.isComputed(widget[key]) && key !== 'weight') {
+        store[key] = widget[key]();
+      }
+    });
+    store.lastUpdate = widget.lastUpdate().getTime();
+    localStorage.setItem('widget:' + widget._id, JSON.stringify(store));
+  }
+}
+function unCacheWidget(widget) {
+  if (window.localStorage && widget.supportsCache) {
+    var store = localStorage.getItem('widget:' + widget._id);
+    if (store) {
+      try {
+        store = JSON.parse(store);
+        Object.keys(store).forEach(function (key) {
+          if (ko.isObservable(widget[key]) && !ko.isComputed(widget[key]) && key !== 'weight') {
+            widget[key](store[key]);
+          }
+        });
+      } catch (ex) {}
+      widget.lastUpdate(new Date(store.lastUpdate));
+    }
+  }
 }
 
 function Application() {
@@ -41,7 +72,72 @@ function Application() {
 
   this.listeningToLoginState = false;
   this.load();
+  setInterval(this.update.bind(this), 1000);
 }
+
+Application.prototype.swap = function (widgetA, widgetB) {
+  if (widgetA === widgetB) return;
+  var temp = widgetA.weight();
+  widgetA.weight(widgetB.weight());
+  widgetB.weight(temp);
+  var saveA = saveWeight(widgetA);
+  var saveB = saveWeight(widgetB);
+  saveA.then(function () {
+    return saveB;
+  }).done();
+  this.widgets(this.widgets().sort(function (a, b) {
+    return a.weight() - b.weight();
+  }));
+};
+Application.prototype.initWidget = function (widgetConfig) {
+  var widget =  widgetTypes.filter(function (widget) {
+    return widget.name === widgetConfig.name;
+  })[0].init(widgetConfig.options);
+  widget._id = widgetConfig._id;
+  widget.name = widgetConfig.name;
+  widget.weight = ko.observable(widgetConfig.weight);
+
+  widget.moveLeft = function () {
+    var predecessor = this.widgets()[this.widgets.indexOf(widget) - 1];
+    if (!predecessor) predecessor = this.widgets()[this.widgets().length - 1];
+    this.swap(widget, predecessor);
+  }.bind(this);
+  widget.moveRight = function () {
+    var successor = this.widgets()[this.widgets.indexOf(widget) + 1];
+    if (!successor) successor = this.widgets()[0];
+    this.swap(widget, successor);
+  }.bind(this);
+  widget.remove = function () {
+    request('/user/config/' + widget._id, {method: 'DELETE'}).then(function (res) {
+      if (res.statusCode !== 200) {
+        throw new Error('/user/config/:id returned status code ' + res.statusCode);
+      }
+      this.widgets.splice(this.widgets.indexOf(widget), 1);
+    }.bind(this)).done();
+  }.bind(this);
+
+  widget.lastUpdate = ko.observable(new Date());
+  unCacheWidget(widget);
+  Promise.resolve(widget.update()).done(cacheWidget.bind(this, widget));
+
+  return widget;
+}
+
+Application.prototype.update = function () {
+  this.widgets().forEach(function (widget) {
+    var lastUpdate = widget.lastUpdate().getTime();
+    var updateFrequency = ms(widget.updateFrequency + '');
+    if (Date.now() - lastUpdate > updateFrequency && !widget.updateInProgress) {
+      widget.updateInProgress = true;
+      Promise.resolve(widget.update()).then(cacheWidget.bind(this, widget)).done(function () {
+        widget.updateInProgress = false;
+      }, function (err) {
+        widget.updateInProgress = false;
+        throw err;
+      });
+    }
+  });
+};
 
 Application.prototype.listenToLoginState = function () {
   if (this.listeningToLoginState) return;
@@ -102,7 +198,7 @@ Application.prototype.load = function () {
       }
       this.email(body.email);
       this.loading(false);
-      this.widgets(body.widgets.map(initWidget));
+      this.widgets(body.widgets.map(this.initWidget.bind(this)));
       this.loadError(null);
     } else {
       throw new Error('/user/config returned status code ' + res.statusCode);
@@ -123,14 +219,18 @@ Application.prototype.add = function () {
   this.addFormVisible(true);
 };
 Application.prototype.addWidget = function () {
-  var options = this.selectedWidgetType().form.add();
-  options.name = this.selectedWidgetType().name;
-  options.weight = this.widgets().reduce(function (a, b) {
-    return a > b.weight ? a : b.weight;
+  var name = this.selectedWidgetType().name;
+  var weight = this.widgets().reduce(function (a, b) {
+    return a > b.weight() ? a : b.weight();
   }, 0) + 1;
+  var email = this.email();
+  var form = this.selectedWidgetType().form;
+  var widgetConfig = {name: name, weight: weight, email: email, options: {}, private: {}};
+  if (form.options) widgetConfig.options = form.options();
+  if (form.credentials) widgetConfig.credentials = form.credentials();
   request('/user/config', {
     method: 'PUT',
-    body: JSON.stringify(options),
+    body: JSON.stringify(widgetConfig),
     headers: {
       'content-type': 'application/json'
     }
@@ -138,7 +238,9 @@ Application.prototype.addWidget = function () {
     if (res.statusCode !== 200) {
       throw new Error('/user/config returned status code ' + res.statusCode);
     }
-    this.widgets.push(initWidget(options));
+    this.widgets.push(this.initWidget(JSON.parse(res.body)));
+    if (form.reset) form.reset();
+    this.selectedWidgetType(null);
   }.bind(this)).done();
 };
 Application.prototype.cancelWidget = function () {

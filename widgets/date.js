@@ -6,11 +6,11 @@ var constant = require('../client/constant.js');
 var WEEK_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 function DateViewModel() {
+  this.updateFrequency = '1 second';
   this.month = ko.observable();
   this.weekday = ko.observable();
   this.time = ko.observable();
   this.update();
-  setInterval(this.update.bind(this), 1000);
 }
 
 DateViewModel.prototype.update = function () {
@@ -19,19 +19,18 @@ DateViewModel.prototype.update = function () {
   this.weekday(WEEK_DAYS[now.getDay()]);
   var hours = now.getHours() + '';
   if (hours.length === 1) hours = '0' + hours;
-  var minutes = now.getMinutes();
+  var minutes = now.getMinutes() + '';
   if (minutes.length === 1) minutes = '0' + minutes;
   this.time(hours + ':' + minutes);
 };
 
 function DateForm() {
-  this.template = 'date-add';
+  this.template = 'date-form';
   this.enabled = ko.observable(true);
 }
-DateForm.prototype.add = function () {
-  return {};
-};
 
 exports.name = 'date';
-exports.init = constant(new DateViewModel());
+exports.init = function () {
+  return new DateViewModel()
+};
 exports.form = new DateForm();;
