@@ -19,7 +19,7 @@ html
     nav.navbar.navbar-default.navbar-static-top
       .container-fluid
         .navbar-brand Dashboard
-        +if('email() && !loading()')
+        +if('user() && !loading()')
           .navbar-right
             button.btn.btn-default.navbar-btn(
               data-bind="click: add, visible: !addFormVisible()") Add / Edit Widgets
@@ -35,9 +35,9 @@ html
         .progress.progress-striped.active
           .progress-bar(style="width: 100%")
             span.sr-only Loading...
-      +if('!loading() && !email()')
+      +if('!loading() && !user()')
         button.btn.btn-primary.btn-lg.btn-block(data-bind="click: login") Sign In / Sign Up
-      +if('!loading() && email()')
+      +if('!loading() && user()')
         +if('addFormVisible()')
           form
             .panel.panel-primary

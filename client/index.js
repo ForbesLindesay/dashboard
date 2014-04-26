@@ -54,7 +54,7 @@ function Application() {
   this.widgetTypes = widgetTypes;
 
   this.loading = ko.observable(true);
-  this.email = ko.observable(null);
+  this.user = ko.observable(null);
   this.widgets = ko.observableArray([]);
 
   this.addFormVisible = ko.observable(false);
@@ -143,9 +143,9 @@ Application.prototype.listenToLoginState = function () {
   if (this.listeningToLoginState) return;
   this.listeningToLoginState = true;
   persona.watch({
-    loggedInUser: this.email(),
+    loggedInUser: this.user(),
     onlogin: function(assertion) {
-      if (this.email()) return;
+      if (this.user()) return;
       this.loading(true);
       request('/user/login', {
         method: 'POST',
@@ -156,8 +156,8 @@ Application.prototype.listenToLoginState = function () {
       }).then(function (res) {
         this.loginError(null);
         if (res.statusCode === 200) {
-          var email = JSON.parse(res.body);
-          if (email === this.email()) return;
+          var user = JSON.parse(res.body);
+          if (user === this.user()) return;
         }
         this.load();
       }.bind(this)).done(null, function (err) {
@@ -165,11 +165,11 @@ Application.prototype.listenToLoginState = function () {
       }.bind(this));
     }.bind(this),
     onlogout: function () {
-      if (!this.email()) return;
+      if (!this.user()) return;
       this.loading(true);
       request('/user/logout', {method: 'POST'}).then(function (res) {
         if (res.statusCode === 200) {
-          this.email(null);
+          this.user(null);
           this.widgets([]);
           this.loading(false);
           this.loginError(null);
@@ -187,16 +187,16 @@ Application.prototype.load = function () {
   this.widgets([]);
   request('/user/config').then(function (res) {
     if (res.statusCode === 403) {
-      this.email(null);
+      this.user(null);
       this.loading(false);
       this.listenToLoginState();
       this.loadError(null);
     } else if (res.statusCode === 200) {
       var body = JSON.parse(res.body);
-      if (!body.email) {
+      if (!body.userid) {
         throw new Error('User not logged in but data still returned');
       }
-      this.email(body.email);
+      this.user(body.userid);
       this.loading(false);
       this.widgets(body.widgets.map(this.initWidget.bind(this)));
       this.loadError(null);
@@ -223,9 +223,9 @@ Application.prototype.addWidget = function () {
   var weight = this.widgets().reduce(function (a, b) {
     return a > b.weight() ? a : b.weight();
   }, 0) + 1;
-  var email = this.email();
+  var user = this.user();
   var form = this.selectedWidgetType().form;
-  var widgetConfig = {name: name, weight: weight, email: email, options: {}, private: {}};
+  var widgetConfig = {name: name, weight: weight, userid: user, options: {}, private: {}};
   if (form.options) widgetConfig.options = form.options();
   if (form.credentials) widgetConfig.credentials = form.credentials();
   request('/user/config', {
