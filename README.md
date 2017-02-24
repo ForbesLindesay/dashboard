@@ -1,5 +1,7 @@
 # dashboard
 
+[![Greenkeeper badge](https://badges.greenkeeper.io/ForbesLindesay/dashboard.svg)](https://greenkeeper.io/)
+
 Dashboard for my life
 
 [![Build Status](https://img.shields.io/travis/ForbesLindesay/dashboard/master.svg)](https://travis-ci.org/ForbesLindesay/dashboard)
